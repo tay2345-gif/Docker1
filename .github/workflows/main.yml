@@ -56,6 +56,4 @@ jobs:
       - name: Inspect the network
         run: docker network inspect $NETWORK_NAME
 
-      # Step 9: Push the built Docker image to DockerHub
-      - name: Push image
-        run: docker image push $DOCKER_IMAGE
+      
