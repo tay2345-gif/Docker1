@@ -1,0 +1,61 @@
+name: Docker Network Tutorial
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build and Test the Docker Network
+    runs-on: ubuntu-latest
+
+    env:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER.HUB.USERNAME }}
+      DOCKER_IMAGE: image05:latest
+      NETWORK_NAME: gha-custom-network
+
+    steps:
+      # Step 1: Checkout the required code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Docker Buildx for building multi-platform images
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      # Step 3: Log in to DockerHub using secrets stored in GitHub
+      - name: Log into DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER.HUB.USERNAME }}
+          password: ${{ secrets.DOCKER.HUB.PASSWORD }}
+
+      # Step 4: Build the Docker image
+      - name: Build Docker image
+        run: |
+          docker image build . -t $DOCKER_IMAGE
+
+      # Step 5: Create a custom Docker network for the containers
+      - name: Create Docker Network
+        run: docker network create $NETWORK_NAME
+
+      # Step 6: Run the two containers in the custom network
+      - name: Start the new containers
+        run: |
+          docker container run -d --name gha-tay1 --network $NETWORK_NAME $DOCKER_IMAGE
+          docker container run -d --name gha-tay2 --network $NETWORK_NAME $DOCKER_IMAGE
+
+      # Step 7: Test the network connectivity by pinging from container1 to container2
+      - name: Test Networking
+        run: |
+          docker exec gha-tay1 ping -c 4 gha-tay2
+
+      # Step 8: Inspect the Docker network to verify everything is set up correctly
+      - name: Inspect the network
+        run: docker network inspect $NETWORK_NAME
+
+      # Step 9: Push the built Docker image to DockerHub
+      - name: Push image
+        run: docker image push $DOCKER_IMAGE
